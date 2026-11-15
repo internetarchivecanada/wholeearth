@@ -14,7 +14,7 @@ from .common import DATA, PUBLIC, page_numbers, slugify
 
 TITLE = "Whole Earth People"
 BASE_URL = "https://wayback-labs.sf.archive.org/wholeearth/"
-CSS_V = "5"
+CSS_V = "6"
 
 ROLE_GROUPS = [
     ("Editors", ["Editor", "Editor-in-Chief", "Executive Editor", "Managing Editor", "Senior Editor", "Usual Editor",
@@ -184,7 +184,7 @@ class Site:
 <link rel="stylesheet" href="{rel}style.css?v={CSS_V}">
 </head><body>
 <a class="skip" href="#main">Skip to content</a>
-<header class="top"><div class="top-in"><a class="brand" href="{rel}./">{TITLE}</a><span class="tag">writers, editors &amp; staff of the Whole Earth publications, 1968–2002</span><nav class="sitenav" aria-label="Site">{navh}</nav></div>
+<header class="top"><div class="top-in"><a class="brand" href="{rel}./"><img src="{rel}img/whole-earth-paper.png" alt="Whole Earth" width="190" height="24"><span>People</span></a><span class="tag">writers, editors &amp; staff of the Whole Earth publications, 1968–2002</span><nav class="sitenav" aria-label="Site">{navh}</nav></div>
 {rolebar}</header>
 <main id="main"{' class="wide"' if wide else ''}>
 {body}
@@ -550,7 +550,7 @@ Read it: <a href="https://wholeearth.info/p/{i['slug']}">Whole Earth Index</a> �
 </ul>
 <p>A person who appears under more than one spelling (“Patty Phelan” and “Patricia Phelan”, “Evelyn Eldridge” and “Evelyn Eldridge-Diaz”) is merged where the match is clear. Others may remain separate. Corrections are welcome: <a href="mailto:info@archive.org?subject=Whole%20Earth%20People">info@archive.org</a>.</p>
 <h2>Reading the issues</h2>
-<p>The issues themselves are on the <a href="https://wholeearth.info/">Whole Earth Index</a>, made by Barry Threw with Gray Area, with design and development by Jon Gacnik and Mindy Seu. The scans are in the Internet Archive’s <a href="https://archive.org/details/wholeearth">Whole Earth collection</a>, digitized from copies donated by Fred Collopy, Kevin Kelly, Danica Remy, Howard Rheingold and the Long Now Foundation. This site links to both and copies none of the publications’ text. The typefaces are the Whole Earth Index’s versions of Latin Modern (GUST Font License).</p>
+<p>The issues themselves are on the <a href="https://wholeearth.info/">Whole Earth Index</a>, made by Barry Threw with Gray Area, with design and development by Jon Gacnik and Mindy Seu. The scans are in the Internet Archive’s <a href="https://archive.org/details/wholeearth">Whole Earth collection</a>, digitized from copies donated by Fred Collopy, Kevin Kelly, Danica Remy, Howard Rheingold and the Long Now Foundation. This site links to both and copies none of the publications’ text. The “Whole Earth” wordmark in the header is the Whole Earth Catalog’s, taken from the logo the Whole Earth Index uses. The typefaces are the Whole Earth Index’s versions of Latin Modern (GUST Font License).</p>
 <p>Stewart Brand on the people behind the publications, and their photographs: <a href="https://www.wholeearth50th.com/photos">wholeearth50th.com</a>.</p>
 <h2>Accessibility</h2>
 <p>The site is plain HTML that works without JavaScript; the name filter on the People page is the only script. It is meant to meet WCAG 2.1 AA (Web Content Accessibility Guidelines). If something does not work for you, please write to <a href="mailto:info@archive.org?subject=Whole%20Earth%20People">info@archive.org</a>.</p>
