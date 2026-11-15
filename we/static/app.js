@@ -7,7 +7,7 @@
   function norm(s){return s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();}
   function run(){
     var t=norm(q.value.trim()), kk=k.value, n=0;
-    items.forEach(function(li){var ok=(!t||norm(li.dataset.n).indexOf(t)>=0)&&(!kk||li.dataset.k.indexOf(kk)>=0); li.hidden=!ok; if(ok)n++;});
+    items.forEach(function(li){var ok=(!t||norm(li.dataset.n).indexOf(t)>=0)&&(!kk||li.dataset.k.split(' ').indexOf(kk)>=0); li.hidden=!ok; if(ok)n++;});
     heads.forEach(function(h){var ul=h.nextElementSibling; h.hidden=!ul.querySelector('li:not([hidden])');});
     out.textContent=(t||kk)? n+' matching':'';
     var u=new URLSearchParams(); if(q.value.trim())u.set('q',q.value.trim()); if(kk)u.set('kind',kk);
@@ -24,3 +24,15 @@ document.querySelectorAll('table.sortable th').forEach(function(th,i){
     rows.forEach(function(r){tb.appendChild(r);}); th.dataset.asc=asc?'1':'0';}
   th.addEventListener('click',sort); th.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();sort();}});
 });
+
+// Role pages: filter table rows by name
+(function(){
+  var q=document.getElementById('tq'); if(!q) return;
+  var t=document.getElementById(q.dataset.table), out=document.getElementById('tcount');
+  var rows=[].slice.call(t.tBodies[0].rows);
+  function norm(s){return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();}
+  var p=new URLSearchParams(location.search); q.value=p.get('q')||'';
+  function run(){var v=norm(q.value.trim()),n=0; rows.forEach(function(r){var ok=!v||norm(r.dataset.n).indexOf(v)>=0; r.hidden=!ok; if(ok)n++;});
+    out.textContent=v? n+' matching':''; history.replaceState(null,'',location.pathname+(v?'?q='+encodeURIComponent(q.value.trim()):''));}
+  q.addEventListener('input',run); run();
+})();

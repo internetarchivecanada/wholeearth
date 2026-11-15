@@ -14,7 +14,7 @@ from .common import DATA, PUBLIC, page_numbers, slugify
 
 TITLE = "Whole Earth People"
 BASE_URL = "https://wayback-labs.sf.archive.org/wholeearth/"
-CSS_V = "3"
+CSS_V = "5"
 
 ROLE_GROUPS = [
     ("Editors", ["Editor", "Editor-in-Chief", "Executive Editor", "Managing Editor", "Senior Editor", "Usual Editor",
@@ -50,6 +50,62 @@ ROLE_GROUPS = [
 ROLE_GROUP = {r: g for g, rs in ROLE_GROUPS for r in rs}
 CONTENT_ROLE = {"wrote": "wrote", "edited": "edited", "compiled": "compiled", "photographs": "photographs",
                 "illustrations": "illustrations", "interviewer": "interviewer", "interviewed": "interviewed"}
+
+
+ART_ROLES = {"Art Director", "Art Direction", "Art Department", "Design Director", "Designer", "Design", "Photography",
+             "Photographer", "Illustration", "Illustrations", "Illustrator", "Cartoonist", "Cover Art", "Cover Design",
+             "Logo", "Headlines", "Section Editor (Art)"}
+BOARD_ROLES = {"Point Board", "Board of Directors", "President"}
+
+# slug, page, label, short label, colour class, what is counted, description
+CATS = [
+    ("writers", "writers.html", "Writers", "Writers", "Pieces credited “Title by Name” in an issue’s table of contents."),
+    ("reviewers", "reviewers.html", "Reviewers", "Reviewers", "Reviews and short pieces signed “—Name” on the catalog pages."),
+    ("editors", "editors.html", "Editors", "Editors", "Issue editors, managing, assistant, contributing and section editors."),
+    ("artists", "artists.html", "Artists & photographers", "Artists", "Illustrators, photographers, designers and art directors."),
+    ("staff", "staff.html", "Production & office staff", "Staff", "Typesetting, paste-up, camera, proofreading, subscriptions, the office, research and the library."),
+    ("board", "board.html", "Point Foundation board", "Board", "Board members of the Point Foundation, the publisher."),
+    ("interviewed", "interviewed.html", "Interviewed", "Interviewed", "People interviewed or in conversation in the contents."),
+    ("essayists", "essayists.html", "Redux essayists", "Redux", "Authors of the 2026 Whole Earth Redux essays."),
+]
+CAT = {c[0]: c for c in CATS}
+
+
+def person_cats(p):
+    """{category: {"n": credits, "issues": set, "roles": set}} for one person."""
+    out = defaultdict(lambda: {"n": 0, "issues": set(), "roles": set()})
+
+    def add(cat, c, n=1, role=None):
+        out[cat]["n"] += n
+        if c.get("issue"):
+            out[cat]["issues"].add(c["issue"])
+        if role:
+            out[cat]["roles"].add(role)
+    for c in p["credits"]:
+        k, r = c["kind"], c["role"]
+        if k == "contents":
+            if r in ("wrote", "edited", "compiled", "interviewer"):
+                add("writers", c, role={"wrote": "writer", "interviewer": "interviewer"}.get(r, r))
+            elif r in ("photographs", "illustrations"):
+                add("artists", c, role=r)
+            elif r == "interviewed":
+                add("interviewed", c)
+        elif k == "signed":
+            add("reviewers", c, n=c.get("count", 1))
+        elif k == "editor":
+            add("editors", c, role="Editor of the issue")
+        elif k == "masthead":
+            if r in ART_ROLES:
+                add("artists", c, role=r)
+            elif r in BOARD_ROLES:
+                add("board", c, role=r)
+            elif ROLE_GROUP.get(r) == "Editors" or r.startswith("Section Editor"):
+                add("editors", c, role=r)
+            else:
+                add("staff", c, role=r)
+        elif k == "redux":
+            add("essayists", c)
+    return out
 
 
 def e(s):
@@ -111,9 +167,14 @@ class Site:
 
     def page(self, path, title, body, rel="", desc="", wide=False):
         t = f"{title} · {TITLE}" if title != TITLE else TITLE
-        nav = [("people/", "People"), ("writers.html", "Writers"), ("staff.html", "Staff"),
-               ("issues.html", "Issues"), ("redux.html", "Redux"), ("about.html", "About")]
-        navh = "".join(f'<a href="{rel}{h}">{x}</a>' for h, x in nav)
+        nav = [("issues.html", "Issues"), ("redux.html", "Redux essays"), ("about.html", "About")]
+        navh = "".join(f'<a href="{rel}{h}"{" aria-current=page" if h == path else ""}>{x}</a>' for h, x in nav)
+        pills = [f'<a class="pill all" href="{rel}people/"{" aria-current=page" if path == "people/index.html" else ""}>'
+                 f'Everyone <span>{len(self.people):,}</span></a>']
+        for slug, href, label, short, _ in CATS:
+            cur = " aria-current=page" if path == href else ""
+            pills.append(f'<a class="pill c-{slug}" href="{rel}{href}"{cur}>{e(label)} <span>{self.cat_count[slug]:,}</span></a>')
+        rolebar = f'<nav class="rolebar" aria-label="Browse people by role"><span class="rb-l">Browse people</span>{"".join(pills)}</nav>' 
         return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -123,7 +184,8 @@ class Site:
 <link rel="stylesheet" href="{rel}style.css?v={CSS_V}">
 </head><body>
 <a class="skip" href="#main">Skip to content</a>
-<header class="top"><a class="brand" href="{rel}./">{TITLE}</a><nav aria-label="Main">{navh}</nav></header>
+<header class="top"><div class="top-in"><a class="brand" href="{rel}./">{TITLE}</a><span class="tag">writers, editors &amp; staff of the Whole Earth publications, 1968–2002</span><nav class="sitenav" aria-label="Site">{navh}</nav></div>
+{rolebar}</header>
 <main id="main"{' class="wide"' if wide else ''}>
 {body}
 </main>
@@ -167,8 +229,8 @@ Feedback? <a href="mailto:info@archive.org?subject=Whole%20Earth%20People">Email
         self.static()
         self.home()
         self.people_index()
-        self.writers()
-        self.staff()
+        for c in CATS:
+            self.category_page(c)
         self.issues_index()
         for c in self.collections:
             self.collection(c)
@@ -189,41 +251,34 @@ Feedback? <a href="mailto:info@archive.org?subject=Whole%20Earth%20People">Email
             shutil.copy(f, PUBLIC / f.name)
 
     def home(self):
-        n_people = len(self.people)
-        writers = [p for p in self.people if p["n_writing"] or p["n_signed"]]
-        staff = [p for p in self.people if p["n_masthead"] or p["n_editor"]]
-        top_w = sorted(writers, key=lambda p: (-(p["n_writing"] + p["n_signed"]), p["sort"]))[:30]
-        top_s = sorted(staff, key=lambda p: (-len({c["issue"] for c in p["credits"] if c["kind"] in ("masthead", "editor")}),
-                                             p["sort"]))[:30]
-        def li(p, n, what):
-            return (f'<li><a href="people/{p["slug"]}.html">{e(p["name"])}</a> '
-                    f'<span class="m">{n} {what} · {self.years(p)}</span></li>')
+        cards = []
+        for slug, href, label, short, desc in CATS:
+            members = self.cat_members[slug]
+            top = sorted(members, key=lambda n: (-self.cats[n][slug]["n"], self.person[n]["sort"]))[:8]
+            unit = {"reviewers": "reviews", "writers": "pieces", "essayists": "essays", "interviewed": "interviews"}.get(slug, "issues")
+            def val(n):
+                d = self.cats[n][slug]
+                return d["n"] if unit in ("reviews", "pieces", "essays", "interviews") else len(d["issues"])
+            lis = "".join(f'<li><a href="people/{self.person[n]["slug"]}.html">{e(n)}</a> <span class="m">{val(n)}</span></li>' for n in top)
+            cards.append(f'''<section class="card c-{slug}"><h2><a href="{href}">{e(label)}</a></h2>
+<p class="big">{len(members):,} <span>people</span></p><p class="desc">{e(desc)}</p>
+<ol class="plist">{lis}</ol><p class="more"><a href="{href}">All {e(short.lower()) if short != "Redux" else "Redux essayists"} →</a></p></section>''')
         colls = []
         for k, c in enumerate(self.collections, 1):
             iss = [i for i in self.issues if i["collection"] == c["title"]]
-            if not iss:
-                continue
-            ppl = {cr["name"] for i in iss for p in self.people for cr in p["credits"] if cr["issue"] == i["slug"]} if False else None
-            colls.append(f'<li><span class="num">{k}</span> <a href="collections/{c["slug"]}.html">{e(c["title"])}</a> '
-                         f'<span class="m">{len(iss)} issues · {min(i["year"] for i in iss)}–{max(i["year"] for i in iss)}</span></li>')
-        letters = self.letter_links("people/")
+            if iss:
+                colls.append(f'<li><a href="collections/{c["slug"]}.html">{e(c["title"])}</a> '
+                             f'<span class="m">{len(iss)} issues · {min(i["year"] for i in iss)}–{max(i["year"] for i in iss)}</span></li>')
         body = f"""
 <section class="intro">
-<p class="lede">The people who made the Whole Earth publications, 1968–2002: the writers credited in each issue’s contents, the reviewers who signed the catalog pages, the editors, and the staff named on the mastheads, from typesetters and paste-up artists to the subscription department.</p>
-<p class="mono small">An index of {n_people:,} people across {len(self.issues)} issues of the Whole Earth Catalog, CoEvolution Quarterly, Whole Earth Review, Whole Earth Software Review and their sister publications. Every credit links to the page where it appears in the Internet Archive’s scan.</p>
+<p class="lede">Everyone who made the Whole Earth publications, 1968–2002: the writers, the reviewers who signed the catalog pages, the editors, the artists and photographers, the people who set the type, pasted up the pages and answered the mail, and the Point Foundation board.</p>
 <form class="find" action="people/" method="get" role="search"><label for="q">Find a person</label>
 <input id="q" name="q" type="search" placeholder="Stewart Brand, Anne Herbert, J. Baldwin…" autocomplete="off"><button>Search</button></form>
-<p class="letters" aria-label="People by surname">{letters}</p>
+<p class="mono small">{len(self.people):,} people across {len(self.issues)} issues of the Whole Earth Catalog, CoEvolution Quarterly, Whole Earth Software Review, Whole Earth Review and Whole Earth. Many people appear under more than one role. Every credit links to its page in the Internet Archive’s scan.</p>
 </section>
-<section class="cols3">
-<div><h2><a href="writers.html">Most-credited writers</a></h2><ol class="plist">{''.join(li(p, p['n_writing'] + p['n_signed'], 'pieces') for p in top_w)}</ol>
-<p class="more"><a href="writers.html">All {len(writers):,} writers →</a></p></div>
-<div><h2><a href="staff.html">Longest on the masthead</a></h2><ol class="plist">{''.join(li(p, len({c['issue'] for c in p['credits'] if c['kind'] in ('masthead','editor')}), 'issues') for p in top_s)}</ol>
-<p class="more"><a href="staff.html">All {len(staff):,} editors and staff →</a></p></div>
-<div><h2><a href="issues.html">The publications</a></h2><ul class="clist">{''.join(colls)}</ul>
-<h2><a href="redux.html">Whole Earth Redux</a></h2>
-<p>{len(self.redux)} new essays (2026), each built on one issue. <a href="redux.html">Essays and their authors →</a></p></div>
-</section>"""
+<div class="cards">{''.join(cards)}</div>
+<section class="pubs"><h2><a href="issues.html">The publications</a></h2><ul class="clist">{''.join(colls)}</ul>
+<p class="more"><a href="people/">Everyone, A to Z →</a> · <a href="redux.html">The Redux essays →</a></p></section>"""
         self.write("index.html", self.page("index.html", TITLE, body))
 
     def letter_links(self, prefix):
@@ -238,60 +293,62 @@ Feedback? <a href="mailto:info@archive.org?subject=Whole%20Earth%20People">Email
         parts = []
         for l in sorted(groups):
             items = "".join(
-                f'<li data-n="{e(p["name"].lower())}" data-k="{kinds(p)}"><a href="{p["slug"]}.html">{e(surname_first(p["name"]))}</a> '
-                f'<span class="m">{self.years(p)} · {e(short_roles(p))}</span></li>' for p in groups[l])
+                f'<li data-n="{e(p["name"].lower())}" data-k="{" ".join(self.cat_order(p["name"]))}"><a href="{p["slug"]}.html">{e(surname_first(p["name"]))}</a> '
+                f'<span class="m">{self.years(p)} · {e(", ".join(CAT[c][3] for c in self.cat_order(p["name"])))}</span></li>' for p in groups[l])
             parts.append(f'<h2 id="{l}">{l}</h2><ul class="alist">{items}</ul>')
         body = f"""<h1>People</h1>
-<p class="mono small">{len(self.people):,} people, by surname. A person is listed once for every spelling the publications used; known variants are merged.</p>
+<p class="mono small">{len(self.people):,} people, by surname, in every role. Known spelling variants are merged. Choose a role in the bar above, or narrow this list:</p>
 <form class="find" role="search" onsubmit="return false"><label for="q">Filter</label><input id="q" name="q" type="search" autocomplete="off" placeholder="Type a name">
-<select id="k" aria-label="Show"><option value="">Everyone</option><option value="w">Writers</option><option value="s">Editors and staff</option><option value="r">Redux essayists</option></select></form>
+<select id="k" aria-label="Show"><option value="">Everyone</option>{"".join(f'<option value="{c[0]}">{e(c[2])}</option>' for c in CATS)}</select></form>
 <p class="letters">{self.letter_links('')}</p>
 <p id="count" class="mono small" aria-live="polite"></p>
 <div id="people">{''.join(parts)}</div>"""
         self.write("people/index.html", self.page("people/index.html", "People", body, rel="../", wide=True))
 
-    def writers(self):
-        ws = sorted([p for p in self.people if p["n_writing"] or p["n_signed"]], key=lambda p: p["sort"])
-        by_n = sorted(ws, key=lambda p: (-(p["n_writing"] + p["n_signed"]), p["sort"]))
-        wk = ("contents", "signed")
-        rows = "".join(
-            f'<tr><td><a href="people/{p["slug"]}.html">{e(p["name"])}</a></td><td class="r">{p["n_writing"]}</td>'
-            f'<td class="r">{p["n_signed"]}</td>'
-            f'<td class="r">{len({c["issue"] for c in p["credits"] if c["kind"] in wk})}</td><td>{self.years(p)}</td>'
-            f'<td class="m">{e(", ".join(sorted({self.issue[c["issue"]]["collection"] for c in p["credits"] if c["kind"] in wk})))}</td></tr>'
-            for p in by_n)
-        body = f"""<h1>Writers</h1>
-<p class="mono small">{len(ws):,} people, most credits first. <b>Contents</b>: pieces credited “… by Name” in an issue’s table of contents. <b>Signed</b>: reviews and short pieces signed “—Name” on the page, counted in the OCR text of the scans (a name needs at least three signatures, or two and another credit, to be listed; a few are quotations credited to their author rather than reviews). Click a column to sort.</p>
-<div class="tablewrap"><table class="sortable"><thead><tr><th>Name</th><th class="r">Contents</th><th class="r">Signed</th><th class="r">Issues</th><th>Years</th><th>Publications</th></tr></thead>
-<tbody>{rows}</tbody></table></div>"""
-        self.write("writers.html", self.page("writers.html", "Writers", body, wide=True))
+    def category_page(self, cat):
+        slug, href, label, short, desc = cat
+        members = self.cat_members[slug]
+        counted = slug in ("writers", "reviewers", "interviewed", "essayists")
+        unit = {"writers": "Pieces", "reviewers": "Signed reviews", "interviewed": "Interviews", "essayists": "Essays"}.get(slug)
+        rows = []
+        for n in sorted(members, key=lambda n: (-(self.cats[n][slug]["n"] if counted else len(self.cats[n][slug]["issues"])), self.person[n]["sort"])):
+            d = self.cats[n][slug]
+            p = self.person[n]
+            iss = [self.issue[x] for x in d["issues"] if x in self.issue]
+            yrs = sorted(i["year"] for i in iss)
+            yr = "" if not yrs else (str(yrs[0]) if yrs[0] == yrs[-1] else f"{yrs[0]}–{yrs[-1]}")
+            other = ", ".join(CAT[c][3] for c in self.cat_order(n) if c != slug)
+            roles = ", ".join(sorted(d["roles"]))
+            rows.append(f'<tr data-n="{e(n.lower())}"><td><a href="people/{p["slug"]}.html">{e(n)}</a></td>'
+                        + (f'<td class="r">{d["n"]}</td>' if counted else "")
+                        + f'<td class="r">{len(iss)}</td><td>{yr}</td>'
+                        + (f'<td class="m">{e(roles)}</td>' if slug not in ("reviewers", "essayists", "interviewed") else "")
+                        + f'<td class="m">{e(other)}</td></tr>')
+        head = ("<th>Name</th>" + (f'<th class="r">{unit}</th>' if counted else "") + '<th class="r">Issues</th><th>Years</th>'
+                + ("<th>Roles</th>" if slug not in ("reviewers", "essayists", "interviewed") else "") + "<th>Also</th>")
+        notes = {
+            "reviewers": "Counted in the OCR text of the scans: a name needs at least three signatures, or two and another credit. A few are quotations credited to their author. The earliest catalogs signed with initials (“—SB”), which are not counted.",
+            "editors": "From the Whole Earth Index’s editor of each issue and from the mastheads read in the OCR text (mastheads were found in %d of %d issues)." % (sum(1 for i in self.issues if i["masthead"]), len(self.issues)),
+            "artists": "From the mastheads, and from “photographs by” and “illustrated by” in the contents.",
+            "staff": "From the mastheads read in the OCR text (found in %d of %d issues). OCR can misread names; each person’s page links to the scanned masthead." % (sum(1 for i in self.issues if i["masthead"]), len(self.issues)),
+            "board": "From the mastheads read in the OCR text.",
+            "writers": "Pieces with no byline in the contents, which includes most catalog reviews, are under Reviewers.",
+            "interviewed": "From the tables of contents (“interview with”, “conversation with”).",
+            "essayists": "Each essay starts from one issue; see <a href=\"redux.html\">the essays</a>.",
+        }
+        body = f"""<div class="cat-head c-{slug}"><h1>{e(label)}</h1><p class="big">{len(members):,} <span>people</span></p></div>
+<p class="desc">{e(desc)}</p>
+<p class="mono small">{notes[slug]} Click a column heading to sort.</p>
+<form class="find" role="search" onsubmit="return false"><label for="tq">Filter</label><input id="tq" type="search" autocomplete="off" placeholder="Type a name" data-table="t"></form>
+<p id="tcount" class="mono small" aria-live="polite"></p>
+<div class="tablewrap"><table class="sortable c-{slug}" id="t"><thead><tr>{head}</tr></thead><tbody>{"".join(rows)}</tbody></table></div>"""
+        self.write(href, self.page(href, label, body, wide=True, desc=f"{label} of the Whole Earth publications, 1968–2002: {len(members):,} people."))
 
-    def staff(self):
-        by_group = defaultdict(lambda: defaultdict(set))  # group -> person -> roles
-        tenure = defaultdict(set)
-        for p in self.people:
-            for c in p["credits"]:
-                if c["kind"] in ("masthead", "editor"):
-                    g = ROLE_GROUP.get(c["role"], "Other")
-                    by_group[g][p["name"]].add(c["role"])
-                    tenure[p["name"]].add(c["issue"])
-        parts = []
-        for g, _ in ROLE_GROUPS:
-            if g not in by_group:
-                continue
-            ppl = sorted(by_group[g], key=lambda n: self.person[n]["sort"])
-            items = "".join(
-                f'<li><a href="people/{self.person[n]["slug"]}.html">{e(surname_first(n))}</a> '
-                f'<span class="m">{e(", ".join(sorted(by_group[g][n])))} · {len(tenure[n])} issue{"s" if len(tenure[n])!=1 else ""} · {self.years(self.person[n])}</span></li>'
-                for n in ppl)
-            parts.append(f'<h2 id="{slugify(g)}">{e(g)} <span class="m">{len(ppl)}</span></h2><ul class="alist">{items}</ul>')
-        toc = " · ".join(f'<a href="#{slugify(g)}">{e(g)}</a>' for g, _ in ROLE_GROUPS if g in by_group)
-        n_mast = sum(1 for i in self.issues if i["masthead"])
-        body = f"""<h1>Editors and staff</h1>
-<p class="mono small">{len(tenure):,} people named as an issue’s editor on the Whole Earth Index, or found on an issue’s masthead (staff box) in the Internet Archive’s OCR text. Mastheads were found and read in {n_mast} of {len(self.issues)} issues. OCR can misread names: each person’s page links to the scanned masthead so you can check.</p>
-<p class="mono small">{toc}</p>
-{''.join(parts)}"""
-        self.write("staff.html", self.page("staff.html", "Editors and staff", body, wide=True))
+    def cat_order(self, n):
+        return [c[0] for c in CATS if c[0] in self.cats[n]]
+
+    def chips(self, n, rel):
+        return "".join(f'<a class="chip c-{c}" href="{rel}{CAT[c][1]}">{e(CAT[c][2])}</a>' for c in self.cat_order(n))
 
     def issues_index(self):
         parts = []
@@ -418,10 +475,10 @@ Read it: <a href="https://wholeearth.info/p/{i['slug']}">Whole Earth Index</a> �
                     thumb = thumb or self.thumb(i, page=c["page"])
                 elif c["kind"] == "signed":
                     lv = c["leaves"]
-                    links = ", ".join(f'<a href="{self.page_url(i, leaf=l)}">{e(pg) if pg else "leaf " + str(l)}</a>' for l, pg in lv[:15])
+                    links = ", ".join(f'<a href="{self.page_url(i, leaf=l)}">{e(pg) if pg else "scan " + str(l)}</a>' for l, pg in lv[:15])
                     more = f" and {len(lv) - 15} more" if len(lv) > 15 else ""
                     items.append(f'<li><span class="role">Signed {len(lv)} review{"s" if len(lv) != 1 else ""}</span> '
-                                 f'<span class="m">p. {links}{more}</span></li>')
+                                 f'<span class="m">pages {links}{more}</span></li>')
                     thumb = thumb or self.thumb(i, leaf=lv[0][0])
                 elif c["kind"] == "editor":
                     items.append('<li><span class="role">Editor of this issue</span></li>')
@@ -454,6 +511,7 @@ Read it: <a href="https://wholeearth.info/p/{i['slug']}">Whole Earth Index</a> �
         body = f"""<p class="crumbs"><a href="./">People</a></p>
 <h1>{e(p['name'])}</h1>
 <p class="mono">{self.roles_line(p)}{(' · ' + self.years(p)) if p['years'] else ''}</p>
+<p class="chips">{self.chips(p["name"], rel)}</p>
 <p class="mono small">Roles: {roles}</p>
 <div class="timeline" aria-label="Years with credits, 1968 to 2002">{tl}</div>
 <p class="legend mono small"><span class="y w"></span> wrote <span class="y s"></span> editor or masthead</p>
@@ -569,6 +627,9 @@ def main():
         for c in p["credits"]:
             if c["issue"] and c["kind"] != "redux":
                 s._ipeople[c["issue"]].add(p["name"])
+    s.cats = {p["name"]: person_cats(p) for p in s.people}
+    s.cat_members = {c[0]: [n for n, d in s.cats.items() if c[0] in d] for c in CATS}
+    s.cat_count = {k: len(v) for k, v in s.cat_members.items()}
     s.build()
 
 
