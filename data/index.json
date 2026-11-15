@@ -48572,15 +48572,7 @@
 "sections": [],
 "editors": [],
 "ocr": true,
-"masthead": [
-{
-"name": "Literary Agent",
-"role": "Editor",
-"leaf": 5,
-"page": "3",
-"confirmed": false
-}
-],
+"masthead": [],
 "signed": {
 "Woody Liswood": 4,
 "Jim Stockford": 3,
@@ -106084,39 +106076,6 @@
 "roles": [
 [
 "Office Manager",
-1
-]
-]
-},
-{
-"name": "Literary Agent",
-"slug": "literary-agent",
-"sort": "agent-literary",
-"credits": [
-{
-"name": "Literary Agent",
-"role": "Editor",
-"kind": "masthead",
-"issue": "whole-earth-software-catalog-june-1984",
-"title": "",
-"page": "3",
-"leaf": 5,
-"section": "",
-"confirmed": false
-}
-],
-"n_writing": 0,
-"n_editor": 0,
-"n_masthead": 1,
-"n_redux": 0,
-"n_signed": 0,
-"n_issues": 1,
-"years": [
-1984
-],
-"roles": [
-[
-"Editor",
 1
 ]
 ]

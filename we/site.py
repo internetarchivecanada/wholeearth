@@ -14,7 +14,7 @@ from .common import DATA, PUBLIC, page_numbers, slugify
 
 TITLE = "Whole Earth People"
 BASE_URL = "https://wayback-labs.sf.archive.org/wholeearth/"
-CSS_V = "1"
+CSS_V = "3"
 
 ROLE_GROUPS = [
     ("Editors", ["Editor", "Editor-in-Chief", "Executive Editor", "Managing Editor", "Senior Editor", "Usual Editor",
