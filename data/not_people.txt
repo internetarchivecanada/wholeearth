@@ -1,0 +1,34 @@
+# Strings the parser takes for names that are not people, one per line.
+Soft Tech
+Goudy Outline
+Hills Food
+Coop Austin
+Restaurant Calistoga
+Canada Windsox
+Liaison Line
+General Purpose
+Clerk Doubleday
+Progressive Graphics
+Simmon Factor
+Fort Worth
+Texas West Hartford
+Wyoming Los Angeles
+CHI Pants
+Chi Pants
+Mother Jones
+Amnesty International
+Santa Ana
+Divine Oracle
+Still Unindicted
+Duck II
+System Administrator
+Customer Support
+Pixel Farmer
+Live Wire
+Coffee Section
+In-Chief Jonathan
+Evelegh Dead
+Teresa Joye Alexandria
+Rebecca Wilson Orinda
+Alabarla Jackson
+David Finacom Corinne Cullen Hawkins

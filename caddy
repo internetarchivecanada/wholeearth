@@ -1,0 +1,13 @@
+redir /wholeearth /wholeearth/
+handle_path /wholeearth/* {
+	root * /opt/services/wholeearth/public
+	# Missing addresses get a real HTML page with status 404, not the front page.
+	@missing not file {path} {path}/index.html {path}index.html
+	handle @missing {
+		rewrite * /404.html
+		file_server {
+			status 404
+		}
+	}
+	file_server
+}
