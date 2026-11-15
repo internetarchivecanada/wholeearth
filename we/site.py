@@ -557,7 +557,7 @@ Read it: <a href="https://wholeearth.info/p/{i['slug']}">Whole Earth Index</a> Â
 <h2>Web archives</h2>
 <p>Web archives are welcome to capture this site. If your crawler has trouble capturing it, contact info@archive.org. There is a <a href="sitemap.xml">sitemap</a>.</p>
 <h2>Who made this</h2>
-<p>This site was made by Claude, an AI model made by Anthropic, working in Claude Code at the direction of Mark Graham (Internet Archive). Mark Graham decided what it should be and what it should cover; Claude did the research and wrote the code. Built {date.today():%-d %B %Y}.</p>
+<p>This site was made by Claude, an AI model made by Anthropic, working in Claude Code at the direction of Mark Graham (Internet Archive), and inspired by Danica Remy. Mark Graham decided what it should be and what it should cover; Claude did the research and wrote the code. Built {date.today():%-d %B %Y}.</p>
 </div>"""
         self.write("about.html", self.page("about.html", "About", body))
 
