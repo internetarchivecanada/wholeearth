@@ -33907,7 +33907,6 @@
 "James Fadiman": 1,
 "Judith Van Slooten": 1,
 "Gurney Norman": 3,
-"My Secret Garden": 2,
 "Salli Rasberry": 1,
 "Andrea Sharp": 1,
 "Peter Coyote": 6,
@@ -57978,7 +57977,6 @@
 "David Hawkins": 1,
 "Gregory Bateson": 2,
 "Rebecca Wilson": 2,
-"My Secret Garden": 2,
 "Janna Katz": 4,
 "Andrea Sharp": 4,
 "Michael Lerner": 1,
@@ -147594,69 +147592,6 @@ null
 [
 "wrote",
 1
-]
-]
-},
-{
-"name": "My Secret Garden",
-"slug": "my-secret-garden",
-"sort": "garden-my-secret",
-"credits": [
-{
-"name": "My Secret Garden",
-"role": "signed reviews",
-"kind": "signed",
-"issue": "the-next-whole-earth-catalog-fall-1980",
-"title": "",
-"page": null,
-"leaves": [
-[
-342,
-"339"
-],
-[
-342,
-"339"
-]
-],
-"count": 2,
-"section": ""
-},
-{
-"name": "My Secret Garden",
-"role": "signed reviews",
-"kind": "signed",
-"issue": "the-essential-whole-earth-catalog-september-1968",
-"title": "",
-"page": null,
-"leaves": [
-[
-232,
-"230"
-],
-[
-232,
-"230"
-]
-],
-"count": 2,
-"section": ""
-}
-],
-"n_writing": 0,
-"n_editor": 0,
-"n_masthead": 0,
-"n_redux": 0,
-"n_signed": 4,
-"n_issues": 2,
-"years": [
-1980,
-1986
-],
-"roles": [
-[
-"signed reviews",
-2
 ]
 ]
 },
